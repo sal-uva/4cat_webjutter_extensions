@@ -1,0 +1,57 @@
+"""
+Update what Webjutter data sources are available.
+"""
+
+from backend.lib.worker import BasicWorker
+
+import requests
+import json
+
+from json import JSONDecodeError
+
+class WebjutterUpdater(BasicWorker):
+	"""
+	Update enabled Webjutter datasources and their metrics
+	"""
+	type = "webjutter-updater"
+	max_workers = 1
+
+
+	@classmethod
+	def ensure_job(cls, config=None):
+		"""
+		Ensure that the Webjutter checker is always running
+
+		:return:  Job parameters for the worker
+		"""
+		return {"remote_id": "webjutter-updater", "interval": 600}
+
+	def work(self):
+		"""
+		Update Webjutter settings
+		"""
+
+		if self.config.get("webjutter-search.url") and self.config.get("webjutter-search.user") and self.config.get("webjutter-search.password"):
+			webjutter_url = self.config.get("webjutter-search.url").strip()
+			webjutter_url = webjutter_url + "/" if not webjutter_url.endswith("/") else webjutter_url
+			webjutter_user = self.config.get("webjutter-search.user")
+			webjutter_pw = self.config.get("webjutter-search.password")
+
+			collections = None
+
+			# Requests datasources overview from Webjutter API
+			try:
+				response = requests.get(webjutter_url + "api/overview", auth=(webjutter_user, webjutter_pw))
+				if response.status_code == 200:
+					collections = response.json()
+
+			except requests.RequestException as e:
+				self.log.error("Failed to update Webjutter datasources: " + str(e))
+
+			# Store as JSON
+			if collections:
+				try:
+					with (self.config.PATH_ROOT / "webjutter_datasources.json").open("w") as f:
+						json.dump(collections, f)
+				except JSONDecodeError:
+					self.log.error("Couldn't parse Webjutter datasource.json:", collections)
