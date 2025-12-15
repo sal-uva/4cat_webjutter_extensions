@@ -5,14 +5,17 @@ See https://github.com/digitalmethodsinitiative/4cat-scrapers
 
 """
 
+import requests
+import json
 import time
-import os
-from pathlib import Path
+import pandas as pd
 
 from backend.lib.search import Search
-from common.lib.helpers import UserInput
-from common.lib.exceptions import QueryParametersException, ProcessorInterruptedException, ConfigException
+from common.lib.helpers import UserInput, flatten_dict
+from common.lib.exceptions import QueryParametersException, ProcessorInterruptedException, ConfigException, QueryNeedsFurtherInputException
 from common.lib.item_mapping import MappedItem
+
+from requests.exceptions import ConnectionError
 
 __author__ = "Sal Hagen"
 __credits__ = ["Sal Hagen"]
@@ -27,16 +30,16 @@ class SearchWebjutter(Search):
 	type = "webjutter-search"  # job ID. This will be changed by the Webjutter-defined data source ID later.
 	category = "Search"  # category
 	title = "Search Webjutter"  # title displayed in UI
-	description = "Retrieve Webjutter records."  # description displayed in UI
+	description = "Retrieve Webjutter data."  # description displayed in UI
 	extension = "ndjson"  # extension of result file, used internally and in UI
 	is_local = False  # Whether this datasource is locally scraped
 	is_static = False  # Whether this datasource is still updated
 
-	print("AAAAAAAAA!")
-
 	max_workers = 1
 	# For API and connection retries.
 	max_retries = 3
+
+	datasources = {}
 
 	config = {
 		# Tumblr API keys to use for data capturing
@@ -64,28 +67,147 @@ class SearchWebjutter(Search):
 	@classmethod
 	def get_options(cls, parent_dataset=None, config=None):
 		"""
-		These options derive info from the `webjustter-datasources.json` file, which is collected and updated by
+		These options derive info from the `webjutter-datasources.json` file, which is collected and updated by
 		`webjustter_worker.py`.
 		:param config:
 		"""
 
 		# Check if webjutter_datasources.json exists in the same directory as this file
-		datasources_file = config.PATH_ROOT / "webjutter_datasources.json"
-		print(datasources_file)
-		if not datasources_file.exists():
+		datasources_file = config.PATH_ROOT / "config/extensions/webjutter_datasources.json"
+		if not config.get("webjutter-search.url") or not config.get("webjutter-search.user") or not config.get("webjutter-search.password"):
 			return {
-				"intro": {
+				"error": {
 					"type": UserInput.OPTION_INFO,
-					"help": "Webjutter is not configured. Please configure it in the Webjutter settings."
+					"help": "<code>Webjutter is not configured. Insert a valid URL and login in the Control Panel or "
+							"ask the admin to do so.</code>"
 				}
 			}
-		else:
+
+		elif not datasources_file.exists():
 			return {
+				"error": {
+					"type": UserInput.OPTION_INFO,
+					"help": "<code>Webjutter is configured but could not reach it. Make sure the Webjutter Search "
+							"settings are valid in the Control Panel.</code>"
+				}
+			}
+
+		# We have a datasource json from Webjutter to work with, use this for input fields
+		try:
+			cls.datasources = json.load(open(datasources_file, "r"))
+		except json.JSONDecodeError:
+			return {
+				"error": {
+					"type": UserInput.OPTION_INFO,
+					"help": "<code>Webjutter is configured and reachable, but the available datasources couldn't be "
+							"read.</code>"
+				}
+			}
+
+		def create_metadata_table(data, header="", ds_data=None):
+			"""Create combined metadata table with records info and metadata"""
+
+			# Add total records to metadata table
+			table_rows = []
+			if header == "Metadata" and ds_data:
+				table_rows = [
+					["Total records", ds_data.get("elastic", {}).get("total_records", "unknown")],
+					["Latest", ds_data.get("elastic", {}).get("up_until", "unknown")]
+				]
+
+			# Flatten nested metadata structure
+			def flatten_metadata(data_dict, prefix=""):
+				if not isinstance(data_dict, dict):
+					return
+				for key, value in data_dict.items():
+					if isinstance(value, dict):
+						# If it's a nested dict, recurse with updated prefix
+						if prefix:
+							new_prefix = f"{prefix}_{key}"
+						else:
+							new_prefix = key
+						flatten_metadata(value, new_prefix)
+					else:
+						label = f"{prefix}_{key}" if prefix else key
+						table_rows.append([label, value])
+
+			# Only flatten if data exists
+			if data:
+				flatten_metadata(data)
+
+			if not table_rows:
+				return "No data available"
+
+			combined_df = pd.DataFrame(table_rows)
+			html_table = combined_df.to_html(header=False, index=False)
+			if header:
+				header_row = f'<tr><th colspan="2" style="text-align: center; font-weight: bold;">{header}</th></tr>'
+				html_table = html_table.replace('<tbody>', f'<tbody>{header_row}')
+			return html_table
+
+		# Get option data from api/overview json file
+		datasource_labels = {ds_id: ds_values.get("name", ds_id)
+							 for ds_id, ds_values in cls.datasources["collections"].items()}
+
+		return {
 			"intro": {
 				"type": UserInput.OPTION_INFO,
 				"help": "Retrieve any kind of Webjutter item."
+			},
+			"webjutter_datasource": {
+				"type": UserInput.OPTION_CHOICE,
+				"help": "Webjutter collection",
+				"options": {
+					**datasource_labels
+				}
+			},
+			# Dynamic info fields for each datasource
+			# metadata
+			# For metadata field:
+			**{
+				f"{ds_id}_metadata": {
+					"type": UserInput.OPTION_INFO,
+					"help": create_metadata_table(ds_data.get("metadata"), header="Metadata", ds_data=ds_data),
+					"requires": f"webjutter_datasource=={ds_id}",
+				} for ds_id, ds_data in cls.datasources["collections"].items() if ds_data.get("metadata")
+			},
+			# For query fields:
+			**{
+				f"{ds_id}_query_fields": {
+					"type": UserInput.OPTION_INFO,
+					"help": create_metadata_table(ds_data.get("fields"), header="Search fields"),
+					"requires": f"webjutter_datasource=={ds_id}",
+				} for ds_id, ds_data in cls.datasources["collections"].items()
+				if ds_data.get("fields") and "Search fields" not in ds_data.get("description", "")
+			},
+			# Indexed fields
+			# Query field
+			"query_header": {
+				"type": UserInput.OPTION_INFO,
+				"help": "### Querying",
+			},
+			"query_info": {
+				"type": UserInput.OPTION_INFO,
+				"help": "Webjutter uses [Elasticsearch's query string syntax](https://www.elastic.co/docs/reference/query-languages/query-dsl/"
+						"query-dsl-query-string-query#query-string-syntax). Make sure to use the correct field names "
+						"and operators.<br><strong>Example 1:</strong> <code>author:\"John Smith\" body:qu?ck bro*</code><br><strong>"
+						"Example 2:</strong> <code>hashtag:(liminal space) AND timestamp:[2012-01-01 TO 2012-12-31]</code>",
+			},
+			**{
+				f"{ds_id}_query_fields": {
+					"type": UserInput.OPTION_INFO,
+					"help": create_metadata_table(ds_data["fields"], header="Search fields"),
+					"requires": f"webjutter_datasource=={ds_id}",
+				} for ds_id, ds_data in cls.datasources["collections"].items()
+				if "fields" in ds_data and "Search fields" not in ds_data.get("description", "")
+			},
+			"query": {
+				"type": UserInput.OPTION_TEXT_LARGE,
+				"help": "Query",
+				"tooltip": "See the ElasticSearch documentation for instructions",
 			}
 		}
+
 
 	def get_items(self, query):
 		"""
@@ -94,12 +216,86 @@ class SearchWebjutter(Search):
 		"""
 
 		# ready our parameters
+		self.dataset.update_status("Preparing parameters")
 		parameters = self.dataset.get_parameters()
+
+		webjutter_url = self.config.get("webjutter-search.url")
+		user = self.config.get("webjutter-search.user")
+		password = self.config.get("webjutter-search.password")
+		datasource = parameters.get("webjutter_datasource")
+		search_query = parameters.get("query")
+
 		results = []
+		total_records = "unknown"
+		retries = 0
+		has_more = True
+		search_after = None  # For ElasticSearch pagination. Used instead of tokens because of large datasets.
+
+		# Build base URL
+		base_url = f"{webjutter_url}/api/{datasource}/search"
+
+		self.dataset.update_status(f"Making first request to {base_url}")
+
+		while has_more and retries <= self.max_retries:
+			if self.interrupted:
+				raise ProcessorInterruptedException(f"Interrupted while fetching items from {datasource} via Webjutter")
+
+			# Build URL with parameters
+			params = {"q": search_query}
+			if search_after:
+				params["search_after"] = search_after
+
+			# Get the data
+			try:
+				response = requests.get(base_url, params=params, auth=(user, password))
+				response.raise_for_status()
+			except ConnectionError as e:
+				self.log.error(f"Failed to fetch items from {datasource} via Webjutter, waiting 2 seconds: {e}")
+				time.sleep(2)
+				retries += 1
+				continue
+			except requests.exceptions.HTTPError as e:
+				if response.status_code == 429:  # Too Many Requests
+					wait_time = min(2 ** retries, 60)  # Exponential backoff, max 60 seconds
+					self.log.warning(f"Rate limited by server, waiting {wait_time} seconds")
+					self.dataset.update_status(f"Rate limited, waiting {wait_time}s before retry")
+					time.sleep(wait_time)
+					retries += 1
+					continue
+				else:
+					raise e
+			except Exception as e:
+				self.log.error(f"Failed to fetch items from {datasource} via Webjutter: {e}")
+				return results
+
+			# Got the data, now parse it
+			try:
+				response_data = response.json()
+			except json.JSONDecodeError as e:
+				self.log.error(f"Invalid JSON response from Webjutter: {e}")
+				return results
+
+			items = response_data.get("results", [])
+			if not items:
+				break
+
+			total_records = response_data.get("total", total_records)
+
+			results.extend(items)
+			retries = 0
+
+			# Check for search_after pagination
+			search_after = response_data.get("search_after")
+			if search_after:
+				self.dataset.update_status(f"Retrieved {len(results)}/{total_records} items")
+				if isinstance(total_records, int) and total_records > 0:
+					self.dataset.update_progress(len(results) / total_records)
+				has_more = True
+			else:
+				has_more = False
 
 		self.job.finish()
 		return results
-
 
 	@staticmethod
 	def map_item(item):
@@ -110,4 +306,27 @@ class SearchWebjutter(Search):
 		:return dict:		Mapped item
 		"""
 
-		return MappedItem({item})
+		return MappedItem(item)
+
+	@staticmethod
+	def validate_query(query, request, config):
+		""" Validate Webjutter query. Use ElasticSearch's query validation"""
+
+		# no query 4 u
+		if not query.get("query", "").strip():
+			raise QueryParametersException("You must provide a search query.")
+
+		if not query.get("webjutter_datasource", "").strip():
+			raise QueryParametersException("You must provide a Webjutter datasource.")
+
+		return query
+
+
+
+	def after_process(self):
+		"""
+		Change the datasource type to the one used in the query.
+
+		"""
+		self.dataset.change_datasource(self.parameters.get("webjutter_datasource", "webjutter"))
+		super().after_process()

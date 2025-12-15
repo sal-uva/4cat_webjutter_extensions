@@ -4,6 +4,7 @@ Update what Webjutter data sources are available.
 
 from backend.lib.worker import BasicWorker
 
+import os
 import requests
 import json
 
@@ -24,19 +25,23 @@ class WebjutterUpdater(BasicWorker):
 
 		:return:  Job parameters for the worker
 		"""
-		return {"remote_id": "webjutter-updater", "interval": 600}
+		return {"remote_id": "webjutter-updater", "interval": 3600}
 
 	def work(self):
 		"""
 		Update Webjutter settings
 		"""
 
+		webjutter_datasources_file = self.config.PATH_ROOT / "config/extensions/webjutter_datasources.json"
+
+		remove_old = True
+
 		if self.config.get("webjutter-search.url") and self.config.get("webjutter-search.user") and self.config.get("webjutter-search.password"):
+
 			webjutter_url = self.config.get("webjutter-search.url").strip()
 			webjutter_url = webjutter_url + "/" if not webjutter_url.endswith("/") else webjutter_url
 			webjutter_user = self.config.get("webjutter-search.user")
 			webjutter_pw = self.config.get("webjutter-search.password")
-
 			collections = None
 
 			# Requests datasources overview from Webjutter API
@@ -51,7 +56,14 @@ class WebjutterUpdater(BasicWorker):
 			# Store as JSON
 			if collections:
 				try:
-					with (self.config.PATH_ROOT / "webjutter_datasources.json").open("w") as f:
+					with webjutter_datasources_file.open("w") as f:
 						json.dump(collections, f)
+						self.log.info(f"Updated Webjutter datasources json file at {webjutter_datasources_file}")
+						remove_old = False
 				except JSONDecodeError:
 					self.log.error("Couldn't parse Webjutter datasource.json:", collections)
+
+		# Remove old file to indicate Webjutter is not available.
+		if remove_old and os.path.isfile(webjutter_datasources_file):
+			self.log.info(f"Couldn't reach the Webjutter server, removing old datasource file at {webjutter_datasources_file}")
+			os.remove(webjutter_datasources_file)
