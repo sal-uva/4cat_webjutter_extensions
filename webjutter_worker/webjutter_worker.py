@@ -25,7 +25,7 @@ class WebjutterUpdater(BasicWorker):
 
 		:return:  Job parameters for the worker
 		"""
-		return {"remote_id": "webjutter-updater", "interval": 3600}
+		return {"remote_id": "webjutter-updater", "interval": 20}
 
 	def work(self):
 		"""

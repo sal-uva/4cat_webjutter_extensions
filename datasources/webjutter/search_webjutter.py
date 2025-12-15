@@ -11,8 +11,8 @@ import time
 import pandas as pd
 
 from backend.lib.search import Search
-from common.lib.helpers import UserInput, flatten_dict
-from common.lib.exceptions import QueryParametersException, ProcessorInterruptedException, ConfigException, QueryNeedsFurtherInputException
+from common.lib.helpers import UserInput, strip_tags
+from common.lib.exceptions import QueryParametersException, ProcessorInterruptedException
 from common.lib.item_mapping import MappedItem
 
 from requests.exceptions import ConnectionError
@@ -60,6 +60,7 @@ class SearchWebjutter(Search):
 			'default': "",
 			'help': 'Webjutter password',
 			'tooltip': "This is defined in the .config file of your Webjutter server",
+			'sensitive': True
 		},
 	}
 	references = ["[Webjutter documentation](https://github.com/digitalmethodsinitiative/4cat-scrapers)"]
@@ -162,7 +163,14 @@ class SearchWebjutter(Search):
 				}
 			},
 			# Dynamic info fields for each datasource
-			# metadata
+			# Description
+			**{
+				f"{ds_id}_description": {
+					"type": UserInput.OPTION_INFO,
+					"help": ds_data.get("description"),
+					"requires": f"webjutter_datasource=={ds_id}",
+				} for ds_id, ds_data in cls.datasources["collections"].items() if ds_data.get("description")
+			},
 			# For metadata field:
 			**{
 				f"{ds_id}_metadata": {
@@ -190,7 +198,7 @@ class SearchWebjutter(Search):
 				"type": UserInput.OPTION_INFO,
 				"help": "Webjutter uses [Elasticsearch's query string syntax](https://www.elastic.co/docs/reference/query-languages/query-dsl/"
 						"query-dsl-query-string-query#query-string-syntax). Make sure to use the correct field names "
-						"and operators.<br><strong>Example 1:</strong> <code>author:\"John Smith\" body:qu?ck bro*</code><br><strong>"
+						"and operators.<br><strong>Example 1:</strong> <code>author:\"John Smith\" OR body:qu?ck bro*</code><br><strong>"
 						"Example 2:</strong> <code>hashtag:(liminal space) AND timestamp:[2012-01-01 TO 2012-12-31]</code>",
 			},
 			**{
@@ -234,7 +242,7 @@ class SearchWebjutter(Search):
 		# Build base URL
 		base_url = f"{webjutter_url}/api/{datasource}/search"
 
-		self.dataset.update_status(f"Making first request to {base_url}")
+		self.dataset.update_status(f"Connecting to Webjutter at {base_url}")
 
 		while has_more and retries <= self.max_retries:
 			if self.interrupted:
@@ -305,6 +313,22 @@ class SearchWebjutter(Search):
 
 		:return dict:		Mapped item
 		"""
+		# Ensure we have an 'id', 'author', and 'body' column, required for 4CAT
+		# 4chan / 8kun
+		if item.get("board") and "no" in item:
+			# todo: make this dynamic, but there's a lot of differences between schemas
+			KNOWN_CHAN_FIELDS = ("board_flag","bumplimit","capcode","closed","country","country_name","custom_spoiler","deleted","ext","filedeleted","filename","flag_name","fsize","h","id","imagelimit","images","m_img","md5","replies","semantic_url","since4pass","spoiler","sticky","tail_size","thread","tim","timestamp_deleted","tn_h","tn_w","trip","w")
+			item = {
+				"board": item.get("board", ""),
+				"id": item.get("no", ""),
+				"thread_id": item.get("no") if not item.get("resto") else item.get("resto"),
+				"unix_timestamp": item.get("time", ""),
+				"timestamp": item.get("now", ""),
+				"author": item.get("name", ""),
+				"title": strip_tags(item.get("sub", "")),
+				"body": strip_tags(item.get("com", "")),
+				**{field: item.get(field, "") for field in KNOWN_CHAN_FIELDS}
+			}
 
 		return MappedItem(item)
 
