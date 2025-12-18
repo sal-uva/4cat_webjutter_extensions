@@ -265,7 +265,6 @@ class SearchWebjutter(Search):
 			except requests.exceptions.HTTPError as e:
 				if response.status_code == 429:  # Too Many Requests
 					wait_time = min(2 ** retries, 60)  # Exponential backoff, max 60 seconds
-					self.log.warning(f"Rate limited by server, waiting {wait_time} seconds")
 					self.dataset.update_status(f"Rate limited, waiting {wait_time}s before retry")
 					time.sleep(wait_time)
 					retries += 1
@@ -299,6 +298,7 @@ class SearchWebjutter(Search):
 				if isinstance(total_records, int) and total_records > 0:
 					self.dataset.update_progress(len(results) / total_records)
 				has_more = True
+				time.sleep(.5)
 			else:
 				has_more = False
 
@@ -317,24 +317,26 @@ class SearchWebjutter(Search):
 		# 4chan / 8kun
 		if item.get("board") and "no" in item:
 			# todo: make this dynamic, but there's a lot of differences between schemas
-			KNOWN_CHAN_FIELDS = ("board_flag","bumplimit","capcode","closed","country","country_name","custom_spoiler","deleted","ext","filedeleted","filename","flag_name","fsize","h","id","imagelimit","images","m_img","md5","replies","semantic_url","since4pass","spoiler","sticky","tail_size","thread","tim","timestamp_deleted","tn_h","tn_w","trip","w")
+			KNOWN_CHAN_FIELDS = ("no","resto","board","sub","com","time","now","name","deleted","timestamp_deleted","replies_to","id","capcode","trip","filename","tim","md5","w","h","tw","th","fsize","country","country_name","op","replies","images","semantic_url","sticky","closed","archived_on","scraped_on","modified_on","unique_ips","bumplimit","imagelimit")
+			REPLACED_FIELDS = ("no", "id", "resto", "com", "board", "time", "now", "name", "sub", "com")
 			item = {
 				"board": item.get("board", ""),
 				"id": item.get("no", ""),
+				"id_in_thread": item.get("id", "")
 				"thread_id": item.get("no") if not item.get("resto") else item.get("resto"),
 				"unix_timestamp": item.get("time", ""),
-				"timestamp": item.get("now", ""),
+				"etd_timestamp": item.get("now", ""),
 				"author": item.get("name", ""),
 				"title": strip_tags(item.get("sub", "")),
 				"body": strip_tags(item.get("com", "")),
-				**{field: item.get(field, "") for field in KNOWN_CHAN_FIELDS}
+				**{field: item.get(field, "") for field in KNOWN_CHAN_FIELDS if field not in REPLACED_FIELDS}
 			}
 
 		return MappedItem(item)
 
 	@staticmethod
 	def validate_query(query, request, config):
-		""" Validate Webjutter query. Use ElasticSearch's query validation"""
+		""" Validate Webjutter query. Todo: Use ElasticSearch's query validation"""
 
 		# no query 4 u
 		if not query.get("query", "").strip():
@@ -344,7 +346,6 @@ class SearchWebjutter(Search):
 			raise QueryParametersException("You must provide a Webjutter datasource.")
 
 		return query
-
 
 
 	def after_process(self):
