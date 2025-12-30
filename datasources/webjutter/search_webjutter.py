@@ -10,7 +10,7 @@ import json
 import time
 import pandas as pd
 from requests import JSONDecodeError
-
+from requests.exceptions import ConnectionError, Timeout, RequestException, HTTPError
 from backend.lib.search import Search
 from common.lib.helpers import UserInput, strip_tags
 from common.lib.exceptions import (
@@ -20,8 +20,6 @@ from common.lib.exceptions import (
     QueryNeedsExplicitConfirmationException,
 )
 from common.lib.item_mapping import MappedItem
-
-from requests.exceptions import ConnectionError
 
 __author__ = "Sal Hagen"
 __credits__ = ["Sal Hagen"]
@@ -120,19 +118,11 @@ class SearchWebjutter(Search):
                 }
             }
 
-        def create_metadata_table(data, header="", ds_data=None):
+        def create_metadata_table(data, header=""):
             """Create combined metadata table with records info and metadata"""
 
             # Add total records to metadata table
             table_rows = []
-            if header == "Metadata" and ds_data:
-                table_rows = [
-                    [
-                        "Total records",
-                        ds_data.get("elastic", {}).get("total_records", "unknown"),
-                    ],
-                    ["Latest", ds_data.get("elastic", {}).get("up_until", "unknown")],
-                ]
 
             # Flatten nested metadata structure
             def flatten_metadata(data_dict, prefix=""):
@@ -196,7 +186,7 @@ class SearchWebjutter(Search):
                 f"{ds_id}_metadata": {
                     "type": UserInput.OPTION_INFO,
                     "help": create_metadata_table(
-                        ds_data.get("metadata"), header="Metadata", ds_data=ds_data
+                        ds_data.get("metadata"), header="Metadata"
                     ),
                     "requires": f"webjutter_datasource=={ds_id}",
                 }
@@ -290,7 +280,12 @@ class SearchWebjutter(Search):
                 params["search_after"] = search_after
 
             # Send the request
-            request_results = self.webjutter_search_request(params, datasource, url, user, password)
+            try:
+                request_results = self.webjutter_search_request(params, datasource, url, user, password)
+            except (ConnectionError, Timeout, RequestException, HTTPError, JSONDecodeError) as e:
+                self.dataset.update_status("Error reaching webjutter", str(e))
+                self.dataset.finish(-1)
+                return
 
             items = request_results["results"]
             if not items:
@@ -369,22 +364,26 @@ class SearchWebjutter(Search):
                 "unix_timestamp": item.pop("time", ""),
                 "etd_timestamp": item.pop("now", ""),
                 "author": item.pop("name", ""),
-                "author_id": item.pop("id", ""),
+                "post_id": item.pop("id", ""),
                 "title": strip_tags(item.pop("sub", "")),
                 "body": strip_tags(item.pop("com", "")),
-                **{
-                    field: item.get(field, "")
-                    for field in KNOWN_CHAN_FIELDS
-                },
+                **{field: item.get(field, "") for field in KNOWN_CHAN_FIELDS},
             }
 
         return MappedItem(item)
 
     @staticmethod
-    def webjutter_search_request(params: dict, collection: str, url: str, user: str, password: str, retries=3) -> dict:
-        """ Make a request to the search endpoint of Webjutter """
+    def webjutter_search_request(
+        params: dict,
+        collection: str,
+        url: str,
+        user: str,
+        password: str,
+        max_retries=3,
+        timeout=20,
+    ) -> dict:
+        """Make a request to the search endpoint of Webjutter"""
 
-        # Make sure we have everything we need
         if not params:
             raise QueryParametersException("No search query provided.")
         if not collection:
@@ -393,43 +392,69 @@ class SearchWebjutter(Search):
             raise ConfigException("No Webjutter url provided.")
         if not user:
             raise ConfigException("No Webjutter username provided.")
-        if not collection:
+        if not password:
             raise ConfigException("No Webjutter password provided.")
 
-        # Get the data
         response = None
         url = f"{url.strip()}/api/{collection.strip()}/search/"
+        retries = 0
+        max_retries = 3 if max_retries < 1 else max_retries
 
-        # Request until we have a response, or we exceed the retries
-        while True:
+        while retries <= max_retries:
             try:
-                response = requests.post(url, params=params, auth=(user, password))
+                response = requests.post(
+                    url, params=params, auth=(user, password), timeout=timeout
+                )
+
+                # Check for error status codes before calling raise_for_status()
+                if response.status_code >= 400:
+                    try:
+                        error_data = response.json()
+                        # This catches the "message" field sent by validate_elasticsearch_query in views_api.py
+                        if isinstance(error_data, dict) and "message" in error_data:
+                            raise QueryParametersException(error_data["message"])
+                    except (ValueError, json.JSONDecodeError):
+                        pass  # Fallback to generic HTTP error handling if not JSON
+
                 response.raise_for_status()
                 break
-            except ConnectionError as e:
-                time.sleep(2)
+
+            except Timeout:
                 retries += 1
-                continue
-            except requests.exceptions.HTTPError as e:
-                if response and response.status_code == 429:  # Too Many Requests
-                    wait_time = min(
-                        2**retries, 60
-                    )  # Exponential backoff, max 60 seconds
-                    time.sleep(wait_time)
+                if retries > max_retries:
+                    raise Timeout(
+                        f"Request to Webjutter timed out after {timeout} seconds."
+                    )
+                time.sleep(2)
+
+            except ConnectionError:
+                retries += 1
+                if retries > max_retries:
+                    raise ConnectionError(f"Could not connect to Webjutter at {url}.")
+                time.sleep(2)
+
+            except HTTPError as e:
+                if response is not None and response.status_code == 429:
+                    time.sleep(min(2**retries, 60))
                     retries += 1
                     continue
-                else:
-                    raise e
-            except Exception as e:
+                # If we already raised QueryParametersException above, let it propagate
                 raise e
 
-        # Got the data, now parse it
-        try:
-            response_data = response.json()
-        except json.JSONDecodeError:
-            return {}
+            except Exception as e:
+                if isinstance(e, QueryParametersException):
+                    raise e
+                raise ConnectionError(
+                    f"Unexpected error connecting to Webjutter: {str(e)}"
+                )
 
-        return response_data
+        if not response:
+            raise ConnectionError("Could not get response from Webjutter after multiple attempts.")
+
+        try:
+            return response.json()
+        except json.JSONDecodeError:
+            raise JSONDecodeError("Webjutter returned invalid JSON response.")
 
     @staticmethod
     def validate_query(query, request, config):
@@ -450,13 +475,9 @@ class SearchWebjutter(Search):
         params = {"q": query.get("query"), "size": 0}
 
         try:
-            response = SearchWebjutter.webjutter_search_request(params, collection, url, user, password)
-        except requests.exceptions.HTTPError as e:
-            try:
-                message = e.response.json()["message"]
-            except (JSONDecodeError, ValueError, KeyError):
-                message = "Search failed."
-            raise QueryParametersException(message)
+            response = SearchWebjutter.webjutter_search_request(params, collection, url, user, password, timeout=5, max_retries=1)
+        except (ConnectionError, Timeout, RequestException, HTTPError, JSONDecodeError) as e:
+            raise QueryParametersException(str(e))
 
         if not response:
             raise QueryParametersException("Webjutter couldn't respond.")
