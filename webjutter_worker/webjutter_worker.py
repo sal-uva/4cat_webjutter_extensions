@@ -25,7 +25,7 @@ class WebjutterUpdater(BasicWorker):
 
 		:return:  Job parameters for the worker
 		"""
-		return {"remote_id": "webjutter-updater", "interval": 20}
+		return {"remote_id": "webjutter-updater", "interval": 120}
 
 	def work(self):
 		"""
@@ -34,9 +34,12 @@ class WebjutterUpdater(BasicWorker):
 
 		webjutter_datasources_file = self.config.PATH_ROOT / "config/extensions/webjutter_datasources.json"
 
+		# Whether to remove the old file. This signals Webjutter is not available.
 		remove_old = True
 
-		if self.config.get("webjutter-search.url") and self.config.get("webjutter-search.user") and self.config.get("webjutter-search.password"):
+		# Only get Webjutter data if settings have been set
+		if (self.config.get("webjutter-search.url") and self.config.get("webjutter-search.user") and
+				self.config.get("webjutter-search.password")):
 
 			webjutter_url = self.config.get("webjutter-search.url").strip()
 			webjutter_url = webjutter_url + "/" if not webjutter_url.endswith("/") else webjutter_url
