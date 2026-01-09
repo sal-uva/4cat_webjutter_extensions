@@ -1,33 +1,33 @@
-<div class="post-content">
+<div class="item-content">
     <header>
-        {% if post.title %}
-            <span class="subject">{{ post.title }}</span>
+        {% if item.title %}
+            <span class="subject">{{ item.title }}</span>
         {% endif %}
 
         <span class="author">
-            {{ post.author }}
+            {{ item.author }}
         </span>
 
-        <span class="time">{{ post.etd_timestamp }}</span>
+        <span class="time">{{ item.etd_timestamp }}</span>
 
-        <span class="post-number">
-            No. {{ post.id }}
+        <span class="item-number">
+            No. {{ item.id }}
         </span>
     </header>
 
-    {% if post.filename and post.filename != '' %}
-        <div class="post-image">
+    {% if item.filename and item.filename != '' %}
+        <div class="item-image">
             <div class="file-info">
-                File: {{ post.filename }}{{ post.ext }}
-                {% if post.fsize %}({{ post.fsize }}, {{ post.w }}x{{ post.h }}){% endif %}
+                File: {{ item.filename }}{{ item.ext }}
+                {% if item.fsize %}({{ item.fsize }}, {{ item.w }}x{{ item.h }}){% endif %}
             </div>
-            <a href="{{ post.tim }}{{ post.ext }}" target="_blank">
-                <img src="{{ post.tim | chan_image(post.ext, post.board) }}" alt="{{ post.id }}" loading="lazy">
+            <a href="{{ item.tim }}{{ item.ext }}" target="_blank">
+                <img src="{{ item.tim | chan_image(item.ext, item.board) }}" alt="{{ item.id }}" loading="lazy">
             </a>
         </div>
     {% endif %}
 
-    <blockquote class="post-content">
-        {{ post.body | safe }}
+    <blockquote class="item-content">
+        {{ item.body | safe }}
     </blockquote>
 </div>

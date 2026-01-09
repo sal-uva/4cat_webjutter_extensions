@@ -11,13 +11,13 @@ See https://github.com/digitalmethodsinitiative/4cat/wiki/Exploring-and-annotati
 	padding-top: 30px;
 }
 
-.posts {
+.items {
     list-style: none;
     padding: 0;
     margin: 0;
 }
 
-.posts li.post {
+.items li.item {
 	display: table;
     font-family: "Arial", sans-serif;
     font-size: 10pt;
@@ -32,58 +32,58 @@ See https://github.com/digitalmethodsinitiative/4cat/wiki/Exploring-and-annotati
     overflow: hidden;
 }
 
-.posts li.post.op {
+.items li.item.op {
     background-color: #ffe;
 }
 
-.posts li.post header {
+.items li.item header {
     border: none;
     margin-bottom: 5px;
 }
 
-.posts li.post.op header {
+.items li.item.op header {
     font-weight: bold;
 }
 
-.posts li.post .author {
+.items li.item .author {
     font-weight: 700;
 }
 
-.posts li.post .subject {
+.items li.item .subject {
     color: #cc1105;
     font-weight: 700;
 }
 
-.posts li.post .time {
+.items li.item .time {
     margin-left: 5px;
 }
 
-.posts li.post .post-number {
+.items li.item .item-number {
     margin-left: 5px;
 }
 
 /* Image styling */
-.post-image {
+.item-image {
     float: left;
     margin: 5px 20px 5px 0;
     max-width: 250px;
 	min-height: 8em;
 }
 
-.post-image .file-info {
+.item-image .file-info {
     font-size: 9pt;
     margin-bottom: 5px;
     color: #000;
 }
 
-.post-image img {
+.item-image img {
     display: block;
     height: auto;
     border: 1px solid #ccc;
 }
 
 /* Post content */
-.post-content blockquote {
+.item-content blockquote {
     margin: 0;
     padding: 0;
     display: block;
@@ -92,21 +92,21 @@ See https://github.com/digitalmethodsinitiative/4cat/wiki/Exploring-and-annotati
     word-break: break-word;
 }
 
-.posts li.post a {
+.items li.item a {
     color: navy;
     text-decoration: underline;
 }
 
-.posts li.post .quote {
+.items li.item .quote {
     color: #789922;
 }
 
-.posts li.post.op .quote {
+.items li.item.op .quote {
     color: #63b563;
 }
 
 /* Annotations */
-.posts li.post .post-annotations {
+.items li.item .item-annotations {
     background-color: #e2c6b5;
     clear: both; /* Clear the float from images */
     margin-top: 10px;
@@ -114,6 +114,6 @@ See https://github.com/digitalmethodsinitiative/4cat/wiki/Exploring-and-annotati
     word-wrap: break-word;
 }
 
-.posts li.post.op .post-annotations {
+.items li.item.op .item-annotations {
     background-color: #f0e0d6;
 }
