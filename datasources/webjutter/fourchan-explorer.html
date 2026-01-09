@@ -1,0 +1,33 @@
+<div class="post-content">
+    <header>
+        {% if post.title %}
+            <span class="subject">{{ post.title }}</span>
+        {% endif %}
+
+        <span class="author">
+            {{ post.author }}
+        </span>
+
+        <span class="time">{{ post.etd_timestamp }}</span>
+
+        <span class="post-number">
+            No. {{ post.id }}
+        </span>
+    </header>
+
+    {% if post.filename and post.filename != '' %}
+        <div class="post-image">
+            <div class="file-info">
+                File: {{ post.filename }}{{ post.ext }}
+                {% if post.fsize %}({{ post.fsize }}, {{ post.w }}x{{ post.h }}){% endif %}
+            </div>
+            <a href="{{ post.tim }}{{ post.ext }}" target="_blank">
+                <img src="{{ post.tim | chan_image(post.ext, post.board) }}" alt="{{ post.id }}" loading="lazy">
+            </a>
+        </div>
+    {% endif %}
+
+    <blockquote class="post-content">
+        {{ post.body | safe }}
+    </blockquote>
+</div>

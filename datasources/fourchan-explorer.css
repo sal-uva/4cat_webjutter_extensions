@@ -4,104 +4,116 @@ See https://github.com/digitalmethodsinitiative/4cat/wiki/Exploring-and-annotati
  
  */
 
-body {
-	background: #ffe;
+.explorer-content {
+    background: #ffe;
+    margin: 5px 0 0 0;
+    box-sizing: border-box;
+	padding-top: 30px;
 }
 
-*, body {
-	font-family: arial;
-}
-
-.post-content {
-	color: maroon;
-	font-family: arial;
-	font-size: 10pt;
-	margin-left: 0;
-	margin-right: 0;
-	margin-top: 5px;
-}
-
-.post-content article {
-	font-size: 10pt;
+.posts {
+    list-style: none;
+    padding: 0;
+    margin: 0;
 }
 
 .posts li.post {
 	display: table;
-	margin-left: 10px;
-	background-color: #f0e0d6;
-	border: 1px solid #d9bfb7;
-	width: auto;
-	min-width: 10px;
-	max-width: 100%;
-	border-left: none;
-	border-top: none;
-	padding: 10px;
+    font-family: "Arial", sans-serif;
+    font-size: 10pt;
+    color: maroon;
+    background-color: #f0e0d6;
+    border: 1px solid #d9bfb7;
+    border-left: none;
+    border-top: none;
+    padding: 20px;
+    margin-bottom: 4px;
+    margin-left: 15px;
+    overflow: hidden;
 }
 
 .posts li.post.op {
-	background-color: #ffe;
-	color: maroon;
-	border: none;
-	border-left: none;
-	border-top: none;
+    background-color: #ffe;
 }
 
 .posts li.post header {
-	border: none;
+    border: none;
+    margin-bottom: 5px;
 }
 
 .posts li.post.op header {
-	font-weight: bold;
+    font-weight: bold;
 }
 
 .posts li.post .author {
-	font-weight: 700;
+    font-weight: 700;
 }
 
 .posts li.post .subject {
-	color: #cc1105;
-	font-weight: 700;
+    color: #cc1105;
+    font-weight: 700;
 }
 
-.posts li.post .deleted {
-	
+.posts li.post .time {
+    margin-left: 5px;
 }
 
-.posts li.post .post-content {
-	display: block;
-	margin: 15px;
-	margin-left: 35px;
+.posts li.post .post-number {
+    margin-left: 5px;
 }
 
-.posts li.post .quote, .posts li.post .quote a {
-	color: navy;
-	text-decoration: underline;
-}
-.posts li.post .greentext {
-	color: #789922;
-}
-
-.posts li.post.op .greentext {
-	color: #63b563;
-}
-
-.posts li.post .post-annotations {
-	background-color: #e2c6b5;
-}
-
-.posts li.post.op .post-annotations {
-	background-color: #f0e0d6;
-}
-
+/* Image styling */
 .post-image {
-    background: #FFF;
     float: left;
+    margin: 5px 20px 5px 0;
+    max-width: 250px;
+	min-height: 8em;
+}
+
+.post-image .file-info {
+    font-size: 9pt;
+    margin-bottom: 5px;
     color: #000;
-    height: 5em;
-    text-align: center;
-    margin-right: 1em;
 }
 
 .post-image img {
-    height: 100%;
+    display: block;
+    height: auto;
+    border: 1px solid #ccc;
+}
+
+/* Post content */
+.post-content blockquote {
+    margin: 0;
+    padding: 0;
+    display: block;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    word-break: break-word;
+}
+
+.posts li.post a {
+    color: navy;
+    text-decoration: underline;
+}
+
+.posts li.post .quote {
+    color: #789922;
+}
+
+.posts li.post.op .quote {
+    color: #63b563;
+}
+
+/* Annotations */
+.posts li.post .post-annotations {
+    background-color: #e2c6b5;
+    clear: both; /* Clear the float from images */
+    margin-top: 10px;
+    overflow: hidden;
+    word-wrap: break-word;
+}
+
+.posts li.post.op .post-annotations {
+    background-color: #f0e0d6;
 }
