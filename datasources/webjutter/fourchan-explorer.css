@@ -90,6 +90,7 @@ See https://github.com/digitalmethodsinitiative/4cat/wiki/Exploring-and-annotati
     overflow-wrap: break-word;
     word-wrap: break-word;
     word-break: break-word;
+    line-height: 1.25;
 }
 
 .items li.item a {

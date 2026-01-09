@@ -21,8 +21,9 @@
                 File: {{ item.filename }}{{ item.ext }}
                 {% if item.fsize %}({{ item.fsize }}, {{ item.w }}x{{ item.h }}){% endif %}
             </div>
-            <a href="{{ item.tim }}{{ item.ext }}" target="_blank">
-                <img src="{{ item.tim | chan_image(item.ext, item.board) }}" alt="{{ item.id }}" loading="lazy">
+            {% set image_url = item.tim | chan_image(item.ext, item.board) %}
+            <a href="{{ image_url }}" target="_blank">
+                <img src="{{ image_url }}" alt="{{ item.id }}" loading="lazy">
             </a>
         </div>
     {% endif %}
