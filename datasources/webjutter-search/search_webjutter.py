@@ -132,12 +132,12 @@ class SearchWebjutter(Search):
                     if isinstance(value, dict):
                         # If it's a nested dict, recurse with updated prefix
                         if prefix:
-                            new_prefix = f"{prefix}_{key}"
+                            new_prefix = f"{prefix} {key}"
                         else:
                             new_prefix = key
                         flatten_metadata(value, new_prefix)
                     else:
-                        label = f"{prefix}_{key}" if prefix else key
+                        label = f"{prefix} {key}" if prefix else key
                         table_rows.append([label, value])
 
             # Only flatten if data exists
@@ -193,20 +193,6 @@ class SearchWebjutter(Search):
                 for ds_id, ds_data in cls.datasources["collections"].items()
                 if ds_data.get("metadata")
             },
-            # For query fields:
-            **{
-                f"{ds_id}_query_fields": {
-                    "type": UserInput.OPTION_INFO,
-                    "help": create_metadata_table(
-                        ds_data.get("fields"), header="Search fields"
-                    ),
-                    "requires": f"webjutter_datasource=={ds_id}",
-                }
-                for ds_id, ds_data in cls.datasources["collections"].items()
-                if ds_data.get("fields")
-                   and "Search fields" not in ds_data.get("description", "")
-            },
-            # Indexed fields
             # Query field
             "query_header": {
                 "type": UserInput.OPTION_INFO,
@@ -225,17 +211,17 @@ class SearchWebjutter(Search):
                         "TO 2022-12-31]</code>",
                 "requires": "webjutter_datasource==fourchan"
             },
+            # For query fields:
             **{
                 f"{ds_id}_query_fields": {
                     "type": UserInput.OPTION_INFO,
                     "help": create_metadata_table(
-                        ds_data["search_fields"], header="Search fields"
+                        ds_data.get("search_fields"), header="Search fields"
                     ),
                     "requires": f"webjutter_datasource=={ds_id}",
                 }
                 for ds_id, ds_data in cls.datasources["collections"].items()
-                if "fields" in ds_data
-                   and "Search fields" not in ds_data.get("description", "")
+                if ds_data.get("search_fields")
             },
             "query": {
                 "type": UserInput.OPTION_TEXT_LARGE,
@@ -333,6 +319,7 @@ class SearchWebjutter(Search):
                 "trip",
                 "filename",
                 "tim",
+                "ext",
                 "md5",
                 "w",
                 "h",
@@ -366,7 +353,7 @@ class SearchWebjutter(Search):
                 "author": item.pop("name", ""),
                 "post_id": item.pop("id", ""),
                 "title": strip_tags(item.pop("sub", "")),
-                "body": strip_tags(item.pop("com", "")),
+                "body": item.pop("com", ""),
                 **{field: item.get(field, "") for field in KNOWN_CHAN_FIELDS},
             }
 

@@ -1,0 +1,44 @@
+<div class="item-content">
+    {% set board = item.board %}
+    {% if board in ["adv", "f", "hr", "mlpol", "mo", "o", "pol", "s4s", "sp", "tg", "trv", "tv", "x"] %}
+        {% set archive_url = "https://archive.4plebs.org" %}
+    {% elif board in ["cm", "sci", "v", "y"] %}
+        {% set archive_url = "https://archive.fireden.net" %}
+    {% else %}
+        {% set archive_url = "https://desuarchive.org"  %}
+    {% endif %}
+    {% set post_url = archive_url ~ '/' ~ item.board ~ '/thread/' ~ item.thread ~ '/#' ~ item.id %}
+    <header>
+        {% if item.title %}
+            <span class="subject">{{ item.title }}</span>
+        {% endif %}
+        <span class="author">
+            {{ item.author }}
+        </span>
+        <span class="time">{{ item.etd_timestamp }}</span>
+        <span class="item-number">
+            <a href="{{ post_url }}" target="_blank">No.{{ item.id }}</a>
+        </span>
+        <span class="external-url">
+            <a href="{{ post_url }}" target="_blank"><span class="external-url" title="Go to original item"><i class="fas fa-external-link-alt"></i></span></a>
+        </span>
+    </header>
+
+    {% if item.filename and item.filename != '' %}
+        <div class="item-image">
+            <div class="file-info">
+                File: {{ item.filename }}{{ item.ext }}
+                {% if item.fsize %}({{ item.fsize }}, {{ item.w }}x{{ item.h }}){% endif %}
+            </div>
+            {% set image_url = item.tim | chan_image(item.ext, item.board) %}
+            <a href="{{ image_url }}" target="_blank">
+                <img src="{{ image_url }}" alt="{{ item.id }}" loading="lazy">
+            </a>
+        </div>
+    {% endif %}
+
+    <blockquote class="item-content">
+        {{ item.body | replace('<br>', ' <br>') | add_ahref | add_base_url(archive_url) |
+        replace('href="#p', 'href="' ~  archive_url ~ '/' ~ item.board ~ '/thread/' ~ item.thread ~ '/#') | safe }}
+    </blockquote>
+</div>

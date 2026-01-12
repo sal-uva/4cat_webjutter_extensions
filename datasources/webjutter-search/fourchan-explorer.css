@@ -1,0 +1,129 @@
+/* 
+
+See https://github.com/digitalmethodsinitiative/4cat/wiki/Exploring-and-annotating-datasets for information on how to add custom CSS.
+ 
+ */
+
+.explorer-content {
+    background: #ffe;
+    margin: 5px 0 0 0;
+    box-sizing: border-box;
+	padding-top: 30px;
+}
+
+.items {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.items li.item {
+	display: table;
+    font-family: "Arial", sans-serif;
+    font-size: 10pt;
+    color: maroon;
+    background-color: #f0e0d6;
+    border: 1px solid #d9bfb7;
+    border-left: none;
+    border-top: none;
+    padding: 20px;
+    margin-bottom: 4px;
+    margin-left: 15px;
+    overflow: hidden;
+}
+
+.items li.item.op {
+    background-color: #ffe;
+}
+
+.items li.item header {
+    border: none;
+    margin-bottom: 5px;
+}
+
+.items li.item.op header {
+    font-weight: bold;
+}
+
+.items li.item .author {
+    font-weight: 700;
+}
+
+.items li.item .subject {
+    color: #cc1105;
+    font-weight: 700;
+}
+
+.items li.item .time {
+    margin-left: 5px;
+}
+
+.items li.item .item-number {
+    margin-left: 5px;
+}
+
+/* Image styling */
+.item-image {
+    float: left;
+    margin: 5px 20px 5px 0;
+    max-width: 250px;
+	min-height: 8em;
+}
+
+.item-image .file-info {
+    font-size: 9pt;
+    margin-bottom: 5px;
+    color: #000;
+    line-height: 1;
+}
+
+.item-image img {
+    display: block;
+    height: auto;
+    border: 1px solid #ccc;
+}
+
+/* Post content */
+.item-content blockquote {
+    margin: 0;
+    padding: 0;
+    display: block;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    word-break: break-word;
+    line-height: 1.25;
+}
+
+.items li.item a {
+    color: navy;
+    text-decoration: underline;
+}
+
+.items li.item .quote {
+    color: #789922;
+}
+
+.items li.item.op .quote {
+    color: #63b563;
+}
+
+.external-url {
+    color: navy;
+}
+
+/* Annotations */
+.items li.item .item-annotations {
+    background-color: #e2c6b5;
+    clear: both; /* Clear the float from images */
+    margin-top: 10px;
+    overflow: hidden;
+    word-wrap: break-word;
+}
+
+.items li.item.op .item-annotations {
+    background-color: #f0e0d6;
+}
+
+.annotation-label {
+    color: #cc1105;
+}
