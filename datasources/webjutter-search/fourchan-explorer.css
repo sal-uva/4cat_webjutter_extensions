@@ -74,6 +74,7 @@ See https://github.com/digitalmethodsinitiative/4cat/wiki/Exploring-and-annotati
     font-size: 9pt;
     margin-bottom: 5px;
     color: #000;
+    line-height: 1;
 }
 
 .item-image img {
@@ -106,6 +107,10 @@ See https://github.com/digitalmethodsinitiative/4cat/wiki/Exploring-and-annotati
     color: #63b563;
 }
 
+.external-url {
+    color: navy;
+}
+
 /* Annotations */
 .items li.item .item-annotations {
     background-color: #e2c6b5;
@@ -117,4 +122,8 @@ See https://github.com/digitalmethodsinitiative/4cat/wiki/Exploring-and-annotati
 
 .items li.item.op .item-annotations {
     background-color: #f0e0d6;
+}
+
+.annotation-label {
+    color: #cc1105;
 }
