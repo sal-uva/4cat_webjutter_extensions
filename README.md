@@ -2,7 +2,8 @@
 This extension forms the bridge between [4CAT](https://github.com/digitalmethodsinitiative/4cat) and [Webjutter](https://github.com/digitalmethodsinitiative/4cat-scrapers), a tool for data collection and search. It requires running 4CAT and Webjutter instances to work. This repo consists of:
 - **Webjutter datasource**: A datasource for 4CAT that lets you search through a collection and write the results to a dataset. It interfaces with Webjutter's `api/[collection/search` endpoint, using ElasticSearch query strings. Webjutter collections become their own datasource types in 4CAT.
 - **Webjutter worker**: A worker for 4CAT that periodically checks whether 4CAT can connect to Webjutter, given the URL, user, and password as defined in the settings. If so, it retrieves the data from Webjutter's `api/overview` endpoint and saves this data to 4CAT's `config/extensions` directory. This file is then used in the Webjutter datasource options.
-- *Explorer templates*: Various 4CAT Explorer templates for distinct collections in Webjutter.
+- **4chan image downloader**: A processor that downloads images from external 4chan archives. 
+- **Explorer templates**: Various 4CAT Explorer templates for distinct collections in Webjutter.
 
 ### How to install
 1. In 4CAT, go to `Control panel -> Extensions`.
