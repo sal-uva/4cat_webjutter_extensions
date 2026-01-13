@@ -148,6 +148,11 @@ class SearchWebjutter(Search):
                 return "No data available"
 
             combined_df = pd.DataFrame(table_rows)
+            # Format numeric columns
+            for col in combined_df.columns:
+                if combined_df[col].dtype in ['int64', 'float64']:
+                    combined_df[col] = combined_df[col].apply(lambda x: f"{x:,}")
+
             html_table = combined_df.to_html(header=False, index=False)
             if header:
                 header_row = f'<tr><th colspan="2" style="text-align: center; font-weight: bold;">{header}</th></tr>'
@@ -201,15 +206,15 @@ class SearchWebjutter(Search):
             "query_info": {
                 "type": UserInput.OPTION_INFO,
                 "help": "Webjutter uses [Elasticsearch's query string syntax](https://www.elastic.co/docs/reference/query-languages/query-dsl/"
-                        "query-dsl-query-string-query#query-string-syntax). Make sure to use the correct field names "
-                        'and operators.<br><strong>Example 1:</strong> <code>author:"John Smith" OR body:qu?ck bro*</code><br><strong>'
-                        "Example 2:</strong> <code>hashtag:(liminal space) AND timestamp:[2012-01-01 TO 2012-12-31]</code>",
+                "query-dsl-query-string-query#query-string-syntax). Make sure to use the correct field names "
+                'and operators.<br><strong>Example 1:</strong> <code>author:"John Smith" OR body:qu?ck bro*</code><br><strong>'
+                "Example 2:</strong> <code>hashtag:(liminal space) AND timestamp:[2012-01-01 TO 2012-12-31]</code>",
             },
             "query_info_fourchan": {
                 "type": UserInput.OPTION_INFO,
                 "help": "<strong>Example 4chan query:</strong> <code>board:mu AND com:*saxophone* AND time:[2020-01-01 "
-                        "TO 2022-12-31]</code>",
-                "requires": "webjutter_datasource==fourchan"
+                "TO 2022-12-31]</code>",
+                "requires": "webjutter_datasource==fourchan",
             },
             # For query fields:
             **{
@@ -222,6 +227,14 @@ class SearchWebjutter(Search):
                 }
                 for ds_id, ds_data in cls.datasources["collections"].items()
                 if ds_data.get("search_fields")
+            },
+            "board": {
+                "type": UserInput.OPTION_CHOICE,
+                "help": "Board",
+                "options": {board_name: board_name for board_name in
+                            cls.datasources.get("collections", {}).get("fourchan", {}).get("metadata", {})
+                            .get("board", {}).keys()},
+                "requires": "webjutter_datasource==fourchan",
             },
             "query": {
                 "type": UserInput.OPTION_TEXT_LARGE,
@@ -245,6 +258,15 @@ class SearchWebjutter(Search):
         password = self.config.get("webjutter-search.password", "")
         datasource = parameters.get("webjutter_datasource")
         search_query = parameters.get("query")
+
+        # Board
+        board = parameters.get("board")
+        if not board:
+            self.dataset.update_status("No board selected")
+            self.dataset.finish(-1)
+            return
+
+        search_query = f"board:{board} AND {search_query}"
 
         results = []
         total_records = 0
@@ -328,6 +350,8 @@ class SearchWebjutter(Search):
                 "fsize",
                 "country",
                 "country_name",
+                "board_flag",
+                "flag_name"
                 "op",
                 "replies",
                 "images",
@@ -483,7 +507,9 @@ class SearchWebjutter(Search):
         Change the datasource type to the one used in the query.
 
         """
+        new_datasource = self.parameters.get("webjutter_datasource", "webjutter")
         self.dataset.change_datasource(
-            self.parameters.get("webjutter_datasource", "webjutter")
+            new_datasource
         )
+
         super().after_process()
