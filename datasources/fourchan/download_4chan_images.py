@@ -249,7 +249,10 @@ class FourchanSearchImageDownloader(BasicProcessor):
                         else:
                             img_url, should_retry, retry_reason = self.extract_url_from_json(resp.json(), search_url)
                             if img_url:
-                                self.filenames[img_url] = img_url.split("/")[-1]
+                                filename = img_url.split("/")[-1]
+                                if len(filename) > 500:
+                                    filename = filename[-500:]
+                                self.filenames[img_url] = filename
                                 break # Success
                     except Exception as e:
                         retry_reason = f"Exception: {e}"
