@@ -30,7 +30,8 @@ class FourchanSearchImageDownloader(BasicProcessor):
     category = "Visual"
     title = "Download 4chan images from archives"
     description = ("Download images from external archives and save them as a ZIP file. This first queries the 4plebs "
-                   "or desuarchive API to collect image URLs. For best results, choose an archive that hosts the "
+                   "or desuarchive API to collect image URLs and then downloads the actual images. Note that 4plebs is "
+                   "slow due to their 5-second rate limit. For the quickest results, choose an archive that hosts the "
                    "board used by this dataset. Some images may not be available on the selected archive, so the "
                    "final image count may be lower than the maximum requested. The ZIP file includes a JSON "
                    "metadata file with more information."
@@ -69,11 +70,6 @@ class FourchanSearchImageDownloader(BasicProcessor):
     def get_options(cls, parent_dataset=None, config=None):
         board = parent_dataset.parameters.get("board") if parent_dataset else None
 
-        # Determine default archive based on board
-        default_archive = "desuarchive"
-        if board in cls.ARCHIVE_CONFIG["fourplebs"]["boards"]:
-            default_archive = "fourplebs"
-
         options = {
             "amount": {
                 "type": UserInput.OPTION_TEXT,
@@ -86,7 +82,7 @@ class FourchanSearchImageDownloader(BasicProcessor):
                     "desuarchive": "desuarchive.org",
                     "fourplebs": "4plebs.org"
                 },
-                "default": default_archive,
+                "default": "fourplebs" if board in cls.ARCHIVE_CONFIG["fourplebs"]["boards"] else "desuarchive",
                 "tooltip": "Selecting the wrong archive for your board will result in no images.",
             }
         }
@@ -183,6 +179,8 @@ class FourchanSearchImageDownloader(BasicProcessor):
 
             search_urls.add(url)
 
+        if len(search_urls) < self.amount:
+            self.amount = len(search_urls)
         return search_urls
 
     def extract_url_from_json(self, response_json, search_url):
@@ -266,7 +264,7 @@ class FourchanSearchImageDownloader(BasicProcessor):
 
                     break  # Stop retrying if success or max retries reached or fatal error
 
-                time.sleep(1)  # Rate limiting 4plebs
+                time.sleep(5)  # Rate limiting 4plebs, pretty harsh!
                 self.dataset.update_status(f"Retrieved {len(self.filenames)}/{self.amount} image URLs")
                 self.dataset.update_progress(len(self.filenames) / self.amount / 2)
                 if len(self.filenames) >= self.amount > 0:
