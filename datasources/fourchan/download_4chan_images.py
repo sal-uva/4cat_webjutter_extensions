@@ -229,10 +229,14 @@ class FourchanSearchImageDownloader(BasicProcessor):
         # Strategy 1: Cloudscraper (4plebs)
         if self.archive_choice == "fourplebs":
             self.dataset.update_status("Using cloudscraper for 4plebs API requests")
-            scraper = cloudscraper.create_scraper(browser={'browser': 'firefox', 'platform': 'windows', 'mobile': False})
+            scraper = cloudscraper.create_scraper(
+                browser={"browser": "firefox", "platform": "windows", "mobile": False}
+            )
 
             for search_url in search_urls:
-                if self.interrupted: raise ProcessorInterruptedException()
+                if self.interrupted:
+                    self.flush_proxied_requests()
+                    raise ProcessorInterruptedException()
 
                 # Manual retry loop for synchronous scraper
                 while True:
@@ -273,13 +277,17 @@ class FourchanSearchImageDownloader(BasicProcessor):
         # Strategy 2: Proxied Requests (Desuarchive)
         else:
             for search_url, response in self.iterate_proxied_requests(
-                search_urls, preserve_order=False, headers={"User-Agent": self.UA},
-                verify=False, timeout=20
+                search_urls,
+                preserve_order=False,
+                headers={"User-Agent": self.UA},
+                verify=False,
+                timeout=20,
             ):
-                if self.interrupted: raise ProcessorInterruptedException()
+                if self.interrupted:
+                    self.flush_proxied_requests()
+                    raise ProcessorInterruptedException()
 
                 should_retry = False
-                retry_reason = ""
 
                 # Check Network Errors
                 if isinstance(response, FailedProxiedRequest):
