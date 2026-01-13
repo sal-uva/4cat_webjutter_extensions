@@ -1,3 +1,10 @@
+
+<style>
+:root {
+  --flags-image: url('{{ url_for('static', filename='img/flags/flags.8.png') }}');
+  --trollflags-image: url('{{ url_for('static', filename='img/flags/flags.png') }}');
+}
+</style>
 <div class="item-content">
     {% set board = item.board %}
     {% if board in ["adv", "f", "hr", "mlpol", "mo", "o", "pol", "s4s", "sp", "tg", "trv", "tv", "x"] %}
@@ -9,12 +16,18 @@
     {% endif %}
     {% set post_url = archive_url ~ '/' ~ item.board ~ '/thread/' ~ item.thread ~ '/#' ~ item.id %}
     <header>
+        <span class="board">/{{ item.board }}/</span>
         {% if item.title %}
-            <span class="subject">{{ item.title }}</span>
+            <span class="subject">{{ item.title }}</span> •
         {% endif %}
         <span class="author">
             {{ item.author }}
         </span>
+        {% if item.get("country") %}
+            <span class="flag flag-{{ item.country|lower }}"></span>
+        {% elif item.get("board_flag") %}
+            <span class="flag flag-t_{{ item.board_flag|lower }}"></span>
+        {% endif %}
         <span class="time">{{ item.etd_timestamp }}</span>
         <span class="item-number">
             <a href="{{ post_url }}" target="_blank">No.{{ item.id }}</a>
@@ -38,7 +51,11 @@
     {% endif %}
 
     <blockquote class="item-content">
-        {{ item.body | replace('<br>', ' <br>') | add_ahref | add_base_url(archive_url) |
-        replace('href="#p', 'href="' ~  archive_url ~ '/' ~ item.board ~ '/thread/' ~ item.thread ~ '/#') | safe }}
+        {% if '<' in item.body %}
+            {{ item.body | replace('<br>', ' <br>') | add_ahref | add_base_url(archive_url) |
+            replace('href="#p', 'href="' ~ archive_url ~ '/' ~ item.board ~ '/thread/' ~ item.thread ~ '/#') | safe }}
+        {% else %}
+            {{ item.body | replace('\n', ' <br>') | add_ahref | safe }}
+        {% endif %}
     </blockquote>
 </div>
