@@ -258,15 +258,19 @@ class FourchanSearchImageDownloader(BasicProcessor):
                         if count < 3:
                             retry_counts[search_url] = count + 1
                             sleep_time = 2 ** (count + 1)
-                            self.dataset.update_status(f"Retrying {search_url} ({count+1}/3): {retry_reason}")
+                            self.dataset.update_status(
+                                f"Retrying {search_url} ({count + 1}/3): {retry_reason}"
+                            )
                             time.sleep(sleep_time)
                             continue
 
-                    break # Stop retrying if success or max retries reached or fatal error
+                    break  # Stop retrying if success or max retries reached or fatal error
 
-                time.sleep(1) # Rate limiting 4plebs
-                self.update_url_collection_progress(len(search_urls))
-                if self.collection_complete(): break
+                time.sleep(1)  # Rate limiting 4plebs
+                self.dataset.update_status(f"Retrieved {len(self.filenames)}/{self.amount} image URLs")
+                self.dataset.update_progress(len(self.filenames) / self.amount / 2)
+                if len(self.filenames) >= self.amount > 0:
+                    break
 
         # Strategy 2: Proxied Requests (Desuarchive)
         else:
