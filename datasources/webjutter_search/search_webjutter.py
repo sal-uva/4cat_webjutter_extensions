@@ -246,7 +246,6 @@ class SearchWebjutter(Search):
     def get_items(self, query):
         """
         Fetches data from Webjutter via its ES and Mongo-enabled API.
-
         """
 
         # ready our parameters
@@ -364,6 +363,7 @@ class SearchWebjutter(Search):
                 "unique_ips",
                 "bumplimit",
                 "imagelimit",
+                "missing_fields"
             )
 
             item = {
@@ -371,14 +371,15 @@ class SearchWebjutter(Search):
                 "thread": item.pop("thread", "")
                 if not item.get("resto")
                 else item.pop("resto"),
-                "id": item.pop("no", ""),
+                "op": item.pop("op", ""),
+                "id": str(item.pop("no", "")),
                 "unix_timestamp": item.pop("time", ""),
                 "etd_timestamp": item.pop("now", ""),
                 "author": item.pop("name", ""),
                 "post_id": item.pop("id", ""),
                 "title": strip_tags(item.pop("sub", "")),
                 "body": item.pop("com", ""),
-                **{field: item.get(field, "") for field in KNOWN_CHAN_FIELDS},
+                **{field: item.pop(field, "") for field in KNOWN_CHAN_FIELDS},
             }
 
         return MappedItem(item)
