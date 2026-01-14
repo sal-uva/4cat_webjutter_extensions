@@ -45,12 +45,20 @@ class WebjutterUpdater(BasicWorker):
                 and self.config.get("webjutter-search.user")
                 and self.config.get("webjutter-search.password")
         ):
+
+            from urllib.parse import urlparse
+
+            # Validate and normalize the URL
             webjutter_url = self.config.get("webjutter-search.url").strip()
-            webjutter_url = (
-                webjutter_url + "/"
-                if not webjutter_url.endswith("/")
-                else webjutter_url
-            )
+            parsed = urlparse(webjutter_url)
+            if not parsed.scheme:
+                webjutter_url = "https://" + webjutter_url
+            elif parsed.scheme not in ["http", "https"]:
+                self.log.error(f"Invalid protocol '{parsed.scheme}' in Webjutter URL. Must be http or https.")
+            else:
+                webjutter_url = webjutter_url
+            webjutter_url = webjutter_url + "/" if not webjutter_url.endswith("/") else webjutter_url
+
             webjutter_user = self.config.get("webjutter-search.user")
             webjutter_pw = self.config.get("webjutter-search.password")
             collections = None
