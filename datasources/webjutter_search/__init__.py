@@ -8,5 +8,5 @@ Initialize Webjutter data source
 from common.lib.helpers import init_datasource
 
 # Internal identifier for this data source
-DATASOURCE = "webjutter-search"
+DATASOURCE = "webjutter"
 NAME = "Webjutter"
