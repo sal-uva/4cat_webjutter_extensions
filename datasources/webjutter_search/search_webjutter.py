@@ -378,7 +378,8 @@ class SearchWebjutter(Search):
                 "author": item.pop("name", ""),
                 "post_id": item.pop("id", ""),
                 "title": strip_tags(item.pop("sub", "")),
-                "body": item.pop("com", ""),
+                "body": item.get("com", ""),
+                "body_no_html": strip_tags(item.pop("com", "")),
                 **{field: item.pop(field, "") for field in KNOWN_CHAN_FIELDS},
             }
 
