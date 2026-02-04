@@ -111,14 +111,12 @@ class FourchanSearchImageDownloader(BasicProcessor):
             self.amount = self.config.get('image-downloader.max', 1000)
 
         if self.source_dataset.num_rows == 0:
-            self.dataset.update_status("No images to download.", is_final=True)
-            self.dataset.finish(0)
+            self.dataset.finish_as_empty("No images to download.")
             return
 
         self.archive_choice = self.parameters.get("archive")
         if not self.archive_choice:
-            self.dataset.update_status("No archive selected.", is_final=True)
-            self.dataset.finish(0)
+            self.dataset.finish_with_error("No archive selected.")
             return
 
         # Setup state
@@ -129,8 +127,7 @@ class FourchanSearchImageDownloader(BasicProcessor):
         # Get Image URLs from source dataset through the chan archive APIs
         api_urls = self.get_api_urls()
         if not api_urls:
-            self.dataset.update_status("No archive API urls found in the dataset to get the image URLs.", is_final=True)
-            self.dataset.finish(0)
+            self.dataset.finish_with_error("No archive API urls found in the dataset to get the image URLs.")
             return
 
         self.dataset.update_status(f'Collected {len(api_urls)} search urls.')
@@ -140,8 +137,7 @@ class FourchanSearchImageDownloader(BasicProcessor):
         self.collect_image_urls(api_urls)
 
         if not self.filenames:
-            self.dataset.update_status("No image URLs found after API search.", is_final=True)
-            self.dataset.finish(0)
+            self.dataset.finish_as_empty("No image URLs found after API search.", is_final=True)
             return
 
         # Download the actual images
