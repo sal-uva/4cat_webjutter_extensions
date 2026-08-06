@@ -128,6 +128,7 @@ See https://github.com/digitalmethodsinitiative/4cat/wiki/Exploring-and-annotati
     background-color: #e2c6b5;
     clear: both; /* Clear the float from images */
     margin-top: 10px;
+    padding: 10px;
     overflow: hidden;
     word-wrap: break-word;
 }
@@ -137,6 +138,7 @@ See https://github.com/digitalmethodsinitiative/4cat/wiki/Exploring-and-annotati
 }
 
 .annotation-label {
+    min-width: 20%;
     color: #cc1105;
 }
 
